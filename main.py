@@ -1,56 +1,92 @@
-import os
-import random
+import os, random, datetime
+import numpy as np
+from kmeans import kMeans
 
 import cv2
 from ultralytics import YOLO
-
 from tracker import Tracker
+from matplotlib import pyplot as plt
 
+def track_video(filename='2persontrack.mov'):
+    video_path = os.path.join(os.path.dirname(__file__), 'data', filename)
+    video_out_path = os.path.join(os.path.dirname(__file__), 'out.mp4')
 
-video_path = os.path.join(os.path.dirname(__file__), 'data', 'd5_5second.mov')
-video_out_path = os.path.join(os.path.dirname(__file__), 'out.mp4')
+    cap = cv2.VideoCapture(video_path)
+    frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    frames_left = frames
+    fps = cap.get(cv2.CAP_PROP_FPS)
 
-
-cap = cv2.VideoCapture(video_path)
-ret, frame = cap.read()
-
-cap_out = cv2.VideoWriter(video_out_path, cv2.VideoWriter_fourcc(*'MP4V'), cap.get(cv2.CAP_PROP_FPS),
-                          (frame.shape[1], frame.shape[0]))
-
-model = YOLO("yolov8n.pt")
-
-tracker = Tracker()
-
-colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(10)]
-
-detection_threshold = 0.5
-while ret:
-    results = model(frame)
-
-    for result in results:
-        detections = []
-        for r in result.boxes.data.tolist():
-            x1, y1, x2, y2, score, class_id = r
-            x1 = int(x1)
-            x2 = int(x2)
-            y1 = int(y1)
-            y2 = int(y2)
-            class_id = int(class_id)
-            if score > detection_threshold:
-                detections.append([x1, y1, x2, y2, score])
-
-        tracker.update(frame, detections)
-
-        for track in tracker.tracks:
-            bbox = track.bbox
-            x1, y1, x2, y2 = bbox
-            track_id = track.track_id
-
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (colors[track_id % len(colors)]), 3)
-
-    cap_out.write(frame)
     ret, frame = cap.read()
 
-cap.release()
-cap_out.release()
-cv2.destroyAllWindows()
+    cap_out = cv2.VideoWriter(video_out_path, cv2.VideoWriter_fourcc(*'MP4V'), cap.get(cv2.CAP_PROP_FPS),
+                            (frame.shape[1], frame.shape[0]))
+
+    model = YOLO("yolov8n.pt")
+
+    tracker = Tracker()
+
+    colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(10)]
+    track_history = {}
+    frame_history = {}
+    detection_threshold = 0.5
+    while ret:
+        results = model(frame, classes=[0])
+
+        for result in results:
+            detections = []
+            for r in result.boxes.data.tolist():
+                x1, y1, x2, y2, score, class_id = r
+                x1 = int(x1)
+                x2 = int(x2)
+                y1 = int(y1)
+                y2 = int(y2)
+                class_id = int(class_id)
+                if score > detection_threshold:
+                    detections.append([x1, y1, x2, y2, score])
+                
+
+            tracker.update(frame, detections)
+
+            for track in tracker.tracks:
+                bbox = track.bbox
+                x1, y1, x2, y2 = bbox
+                track_id = track.track_id
+
+                # if track_id not in track_history:
+                #     track.saved_frames = frame[int(y1):int(y2),int(x1):int(x2)]
+                # plt.imshow(track.saved_frame)
+                frame_history.setdefault(track_id, []).append(frame[int(y1):int(y2),int(x1):int(x2)])
+                # track_history.setdefault(track_id, [])
+                track_history[track_id] = track
+                color = (colors[track_id % len(colors)])
+                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 3)
+                cv2.putText(frame, str(track_id), (int(x1), int(y1)), cv2.FONT_HERSHEY_SIMPLEX, 
+                   1, color, 2, cv2.LINE_AA)
+
+        frames_left -= 1
+        seconds = round(frames_left / fps)
+        video_time = datetime.timedelta(seconds=seconds)
+        print(f"video time remaining: {video_time}")
+
+        cap_out.write(frame)
+        ret, frame = cap.read()
+
+    cap.release()
+    cap_out.release()
+    cv2.destroyAllWindows()
+
+    return track_history, frame_history
+
+track_hist, frame_hist = track_video()
+data = [track_hist[track].features for track in track_hist]
+kmeans = kMeans(data)
+grouped_tracks = []
+
+
+for i, track in enumerate(track_hist):
+    track_hist[track].saved_frames = frame_hist[track]
+    grouped_tracks.setdefault(kmeans.labels_[i], []).append(track_hist[track])
+
+print(kmeans)
+
+

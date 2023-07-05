@@ -10,6 +10,7 @@ class Tracker:
     tracker = None
     encoder = None
     tracks = None
+    scene = None
 
     def __init__(self):
         max_cosine_distance = 0.4
@@ -21,11 +22,13 @@ class Tracker:
         metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
         self.tracker = DeepSortTracker(metric)
         self.encoder = gdet.create_box_encoder(encoder_model_filename, batch_size=1)
+        self.scene = 0
 
     def update(self, frame, detections):
 
         bboxes = np.asarray([d[:-1] for d in detections])
-        bboxes[:, 2:] = bboxes[:, 2:] - bboxes[:, 0:2]
+        if len(bboxes) > 0:
+            bboxes[:, 2:] = bboxes[:, 2:] - bboxes[:, 0:2]
         scores = [d[-1] for d in detections]
 
         features = self.encoder(frame, bboxes)
@@ -39,15 +42,17 @@ class Tracker:
         self.update_tracks()
 
     def update_tracks(self):
+        self.scene += 1
         tracks = []
         for track in self.tracker.tracks:
             if not track.is_confirmed() or track.time_since_update > 1:
                 continue
+            
             bbox = track.to_tlbr()
-
             id = track.track_id
-
-            tracks.append(Track(id, bbox))
+            features = np.array(track.features_history).mean(axis=0)
+            age = track.age
+            tracks.append(Track(id, bbox, features, self.scene, age))
 
         self.tracks = tracks
 
@@ -55,7 +60,15 @@ class Tracker:
 class Track:
     track_id = None
     bbox = None
+    features = None
+    last_scene = None
+    age = None
+    saved_frames = None
 
-    def __init__(self, id, bbox):
+    def __init__(self, id, bbox, features, scene, age):
         self.track_id = id
         self.bbox = bbox
+        self.features = features
+        self.scene = scene
+        self.age = age
+        self.saved_frames = None
