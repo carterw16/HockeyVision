@@ -1,6 +1,8 @@
 # Manual addition to ignore video and model data
 data/
 model_data/
+*.mp4
+*.mov
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

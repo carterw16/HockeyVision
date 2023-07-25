@@ -18,9 +18,18 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from myapp import views
+from rest_framework import routers
+ 
+# create a router object
+router = routers.DefaultRouter()
+ 
+# register the router
+router.register(r'videos',views.VideoView, 'video')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("myapp/", include("myapp.urls")),
     path("", include("myapp.urls")),
+    path('api/', include(router.urls))
 ]+ static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)

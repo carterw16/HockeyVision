@@ -2,24 +2,13 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from .models import Video
 from .forms import VideoForm
+from django.shortcuts import render
 
-def showvideo(request):
-    lastvideo = Video.objects.last()
+# import view sets from the REST framework
+from rest_framework import viewsets
+# import the TodoSerializer from the serializer file
+from .serializers import VideoSerializer
 
-    if lastvideo:
-      videofile = lastvideo.videofile
-    else:
-        videofile = None
-
-    form = VideoForm(request.POST or None, request.FILES or None)
-    if form.is_valid():
-        form.save()
-    
-    context = {'videofile': videofile,
-              'form': form
-              }
-    
-    return render(request, 'myapp/video.html', context)
-
-def index(request):
-    return render(request, "myapp/index.html", context={})
+class VideoView(viewsets.ModelViewSet):
+	serializer_class = VideoSerializer
+	queryset = Video.objects.all()

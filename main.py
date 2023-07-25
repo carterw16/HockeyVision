@@ -1,11 +1,12 @@
 import os, random, datetime
 import numpy as np
 from kmeans import kMeans
-
+import psycopg2
 import cv2
 from ultralytics import YOLO
 from tracker import Tracker
 from matplotlib import pyplot as plt
+from dotenv import load_dotenv
 
 def track_video(filename='2persontrack.mov'):
     video_path = os.path.join(os.path.dirname(__file__), 'data', filename)
@@ -77,16 +78,41 @@ def track_video(filename='2persontrack.mov'):
 
     return track_history, frame_history
 
+def cluster(track_hist, frame_hist):
+    data = [track_hist[track].features for track in track_hist]
+    kmeans = kMeans(data)
+    grouped_tracks = {}
+
+    for i, track in enumerate(track_hist):
+        track_hist[track].saved_frames = frame_hist[track]
+        grouped_tracks.setdefault(kmeans.labels_[i], []).append(track_hist[track])
+    
+    return grouped_tracks
+
+def sendData():
+    load_dotenv()
+    DB_NAME = "hockeyvision"
+    DB_USER = "postgres"
+    DB_PASS = os.getenv("POSTGRES_PASSWORD")
+    DB_HOST = "localhost"
+    DB_PORT = "5432"
+    conn = psycopg2.connect(database=DB_NAME, user=DB_USER, password=DB_PASS,
+                            host=DB_HOST, port=DB_PORT)
+    print("Database connected successfully")
+
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO public. (ID,NAME,EMAIL) VALUES
+        (1,'Alan Walker','awalker@gmail.com'),
+        (2,'Steve Jobs','sjobs@gmail.com')
+    """)
+    conn.commit()
+    conn.close()
+
+
 track_hist, frame_hist = track_video()
-data = [track_hist[track].features for track in track_hist]
-kmeans = kMeans(data)
-grouped_tracks = []
+grouped_tracks = cluster(track_hist, frame_hist)
 
-
-for i, track in enumerate(track_hist):
-    track_hist[track].saved_frames = frame_hist[track]
-    grouped_tracks.setdefault(kmeans.labels_[i], []).append(track_hist[track])
-
-print(kmeans)
+print(grouped_tracks)
 
 
