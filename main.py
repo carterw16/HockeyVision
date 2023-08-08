@@ -7,6 +7,9 @@ from ultralytics import YOLO
 from tracker import Tracker
 from matplotlib import pyplot as plt
 from dotenv import load_dotenv
+import boto3
+
+from s3_upload import upload_file
 
 def track_video(filename='2persontrack.mov'):
     video_path = os.path.join(os.path.dirname(__file__), 'data', filename)
@@ -19,8 +22,11 @@ def track_video(filename='2persontrack.mov'):
 
     ret, frame = cap.read()
 
-    cap_out = cv2.VideoWriter(video_out_path, cv2.VideoWriter_fourcc(*'MP4V'), cap.get(cv2.CAP_PROP_FPS),
-                            (frame.shape[1], frame.shape[0]))
+    cap_out = cv2.VideoWriter(
+        video_out_path,
+        cv2.VideoWriter_fourcc(*'avc1'),
+        cap.get(cv2.CAP_PROP_FPS),
+        (frame.shape[1], frame.shape[0]))
 
     model = YOLO("yolov8n.pt")
 
@@ -44,7 +50,7 @@ def track_video(filename='2persontrack.mov'):
                 class_id = int(class_id)
                 if score > detection_threshold:
                     detections.append([x1, y1, x2, y2, score])
-                
+
 
             tracker.update(frame, detections)
 
@@ -61,7 +67,7 @@ def track_video(filename='2persontrack.mov'):
                 track_history[track_id] = track
                 color = (colors[track_id % len(colors)])
                 cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 3)
-                cv2.putText(frame, str(track_id), (int(x1), int(y1)), cv2.FONT_HERSHEY_SIMPLEX, 
+                cv2.putText(frame, str(track_id), (int(x1), int(y1)), cv2.FONT_HERSHEY_SIMPLEX,
                    1, color, 2, cv2.LINE_AA)
 
         frames_left -= 1
@@ -86,7 +92,7 @@ def cluster(track_hist, frame_hist):
     for i, track in enumerate(track_hist):
         track_hist[track].saved_frames = frame_hist[track]
         grouped_tracks.setdefault(kmeans.labels_[i], []).append(track_hist[track])
-    
+
     return grouped_tracks
 
 def sendData():
@@ -100,19 +106,20 @@ def sendData():
                             host=DB_HOST, port=DB_PORT)
     print("Database connected successfully")
 
+
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO public. (ID,NAME,EMAIL) VALUES
-        (1,'Alan Walker','awalker@gmail.com'),
-        (2,'Steve Jobs','sjobs@gmail.com')
+        INSERT INTO public.myapp_video (ID, NAME, URL, GAME_ID) VALUES
+        (1,'2persontrackout','https://hockeyvision-videos.s3.amazonaws.com/2persontrackout',0);
     """)
     conn.commit()
     conn.close()
 
+# sendData()
 
 track_hist, frame_hist = track_video()
 grouped_tracks = cluster(track_hist, frame_hist)
 
+
+
 print(grouped_tracks)
-
-

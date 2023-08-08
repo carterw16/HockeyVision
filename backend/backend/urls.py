@@ -29,7 +29,6 @@ router.register(r'videos',views.VideoView, 'video')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("myapp/", include("myapp.urls")),
-    path("", include("myapp.urls")),
-    path('api/', include(router.urls))
+    path('api/', include(router.urls)),
+    path('', include(router.urls))
 ]+ static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)

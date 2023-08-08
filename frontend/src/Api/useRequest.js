@@ -22,7 +22,7 @@ export const useRequest = ({
     setState({...state, loading: true})
     axios({
       method,
-      url: `${API_URL}${route}`,
+      url: `${route}`,
       responseType,
       data,
       params
