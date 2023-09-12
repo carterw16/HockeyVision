@@ -1,6 +1,6 @@
 import os, random, datetime
 import numpy as np
-from kmeans import kMeans
+from kmeans import kMeans, cluster
 import psycopg2
 import cv2
 from ultralytics import YOLO
@@ -20,6 +20,7 @@ def track_video(input_file='2persontrack.mov', output_file='out.mp4'):
     fps = cap.get(cv2.CAP_PROP_FPS)
 
     ret, frame = cap.read()
+    shape = frame.shape
 
     cap_out = cv2.VideoWriter(
         video_out_path,
@@ -78,34 +79,25 @@ def track_video(input_file='2persontrack.mov', output_file='out.mp4'):
     cap_out.release()
     cv2.destroyAllWindows()
 
-    return track_history
+    return track_history, fps, shape
 
-def cluster(track_hist):
-    data = [track_hist[track].features for track in track_hist]
-    kmeans = kMeans(data)
-    grouped_tracks = {}
-
-    for i, track in enumerate(track_hist):
-        # track_hist[track].saved_frames = frame_hist[track]
-        grouped_tracks.setdefault(kmeans.labels_[i], []).append(track_hist[track])
-
-    return grouped_tracks
 
 def main():
-    input_file = '2persontrack.mov'
+    input_file = 'd5vid_short.mov'
     output_file_name = os.path.splitext(input_file)[0]+'out'
-    track_hist = track_video(input_file, output_file_name+'.mp4')
+    track_hist, fps, shape = track_video(input_file, output_file_name+'.mp4')
     grouped_tracks = cluster(track_hist)
-    # send_data(
-    #     vid_name=output_file_name,
-    #     game_name='2persongame',
-    #     cluster_dict=grouped_tracks,
-    #     )
-    plt.imshow(grouped_tracks[0][0].saved_frames[0])
+    frame_width = shape[1]
+    frame_height = shape[0]
+    send_data(
+        vid_name=output_file_name,
+        game_name='d5_shortgame',
+        cluster_dict=grouped_tracks,
+        fps=fps,
+        frame_width=frame_width,
+        frame_height=frame_height
+        )
     print(grouped_tracks)
 
 if __name__ == "__main__":
     main()
-
-
-# print(grouped_tracks)

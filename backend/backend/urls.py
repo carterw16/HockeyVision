@@ -20,15 +20,19 @@ from django.conf import settings
 from django.conf.urls.static import static
 from myapp import views
 from rest_framework import routers
- 
+
 # create a router object
 router = routers.DefaultRouter()
- 
+
 # register the router
 router.register(r'videos',views.VideoView, 'video')
+router.register(r'games',views.GamesView, 'games')
+router.register(r'tracks',views.TrackView, 'tracks')
+router.register(r'clusters',views.ClusterView, 'clusters')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
-    path('', include(router.urls))
+    path('', include(router.urls)),
+    path('newview', views.NewView.as_view()),
 ]+ static(settings.MEDIA_URL, document_root= settings.MEDIA_ROOT)

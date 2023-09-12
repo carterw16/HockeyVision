@@ -5,8 +5,7 @@ import os
 from s3_upload import upload_file
 import cv2
 
-
-def send_data(vid_name=None, game_name=None, cluster_dict=None):
+def send_data(vid_name=None, game_name=None, cluster_dict=None, fps=None, frame_width=None, frame_height=None):
     upload_file(vid_name+'.mp4', 'hockeyvision-videos', vid_name)
 
     load_dotenv()
@@ -27,25 +26,21 @@ def send_data(vid_name=None, game_name=None, cluster_dict=None):
     if vid_name is not None:
         game_id = cur.fetchone()[0]
         cur.execute(
-            'INSERT INTO public.myapp_video (name, game_id) VALUES (%s, %s) RETURNING id',
-            (vid_name, game_id))
+            '''INSERT INTO public.myapp_video (name, game_id, fps, width, height)
+                VALUES (%s, %s, %s, %s, %s) RETURNING id''',
+            (vid_name, game_id, fps, frame_width, frame_height))
     if cluster_dict is not None:
         video_id = cur.fetchone()[0]
         for i, cluster in enumerate(cluster_dict.values()):
             cur.execute(
-                'INSERT INTO public.myapp_cluster (predicted, junk) VALUES (%s, %s) RETURNING id',
-                (True, False))
+                'INSERT INTO public.myapp_cluster (predicted, junk, video_id) VALUES (%s, %s, %s) RETURNING id',
+                (True, False, video_id))
             cluster_id = cur.fetchone()[0]
             for j, track in enumerate(cluster):
-                track_frame = track.saved_frames[0]
-                frame_name = 'cluster'+str(i)+'track'+str(j)
-                filepath = 'track_frames/cluster'+str(i)+'track'+str(j)+'.jpg'
-                if not os.path.exists('player_tracking/track_frames'):
-                    os.mkdir('player_tracking/track_frames')
-                cv2.imwrite('track_frames/'+frame_name+'.jpg',track_frame)
-                upload_file(filepath, 'hockeyvision-videos', frame_name)
+                bboxes = track.saved_bboxes
+                lifetime = [track.last_scene - track.age, track.last_scene]
                 cur.execute(
-                'INSERT INTO public.myapp_track (pred_cluster, frame_name, video_id) VALUES (%s, %s, %s)',
-                (cluster_id, frame_name, video_id))
+                'INSERT INTO public.myapp_track (pred_cluster_id, bboxes, lifetime, video_id) VALUES (%s, %s, %s, %s)',
+                (cluster_id, bboxes, lifetime, video_id))
     conn.commit()
     conn.close()

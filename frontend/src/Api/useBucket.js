@@ -35,7 +35,6 @@ export const useBucket = ({
         bucket: "hockeyvision-videos",
         key: `${bucket_key}`,
       });
-      console.log(clientUrl)
       setState({...state, data: clientUrl, loading: false, fetched: true})
     } catch (err) {
       console.error(err);

@@ -82,7 +82,7 @@ class Track:
             self.features_history.append(feature)
         if frame is not None:
             self.frames_history.append(frame)
-        self.bbox_history.append(self.to_tlbr())
+        self.bbox_history.append(self.to_tlbr().tolist())
         self._n_init = n_init
         self._max_age = max_age
 
@@ -146,7 +146,7 @@ class Track:
         self.features.append(detection.feature)
         self.features_history.append(detection.feature)
         self.frames_history.append(frame)
-        self.bbox_history.append(self.to_tlbr())
+        self.bbox_history.append(self.to_tlbr().tolist())
         self.hits += 1
         self.time_since_update = 0
         if self.state == TrackState.Tentative and self.hits >= self._n_init:
