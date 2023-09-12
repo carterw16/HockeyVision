@@ -12,6 +12,8 @@ The backend runs a Django API endoint. A PostgreSQL database stores data for gam
 ## Frontend
 The frontend is a React.js frontend which displays processed videos along with their associated clusters with example still frames indicating each person.
 
+<img src="https://github.com/carterw16/HockeyVision/blob/main/Screen%20Shot%202023-09-12%20at%2012.50.48%20AM.png" alt="Image not loading" width=90%/>
+
 ## Run Backend
 `cd backend`
 `python manage.py runserver`
